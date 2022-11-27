@@ -30,7 +30,7 @@ if($null -eq (Get-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-
 ## Then we bootstrap the host and install WSL and Ansible
 ## We can check if the correct distro is already installed, if not we run the install command
 $wsl = wsl -l | Where-Object {$_.Replace("`0","") -match '22.04'}
-$distro = Ubuntu-20.04
+$distro = "Ubuntu-20.04"
 
 ## Set username and password (if existing install please enter your current user credentials otherwise create a new one)
 Write-Host "Please fill in your username"
@@ -45,7 +45,7 @@ if($null -eq $wsl){
     ## Set WSL2 as default
     wsl --set-default-version 2
     ## Set our ubuntu 20.04 image as default
-    wsl --setdefault Ubuntu-20.04
+    wsl --setdefault $distro
     ## Add new user
     wsl -u root -d $distro useradd -m "$username"
     ## Set the password
@@ -64,11 +64,22 @@ wsl --setdefault Ubuntu-20.04
 $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($password)
 $plainpassword = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
 
+## Enable systemd and restart the WSL2 instance
+wsl -u $username /bin/bash -c "echo $plainpassword | sudo -S tee -a /etc/wsl.conf > dev/null <<EOT
+[boot]
+systemd=true
+EOT"
+
 ## Let's make sure all our packages are up-to-date
 wsl -u $username /bin/bash -c "echo $plainpassword | sudo -S apt update -y && sudo -S apt upgrade -y"
 
+## In order for Ansible to work openSSH Server needs to be installed
+wsl -u $username /bin/bash -c "echo $plainpassword | sudo -S apt install openssh-server -y && "
+
 ## Now install Ansible for the second stage of this deployment
 wsl -u $username /bin/bash -c "echo $plainpassword | sudo -S apt install ansible -y"
+
+
 
 
 
