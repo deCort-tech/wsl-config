@@ -1,0 +1,2 @@
+ansible_conncttion: ssh
+ansible_user: 
