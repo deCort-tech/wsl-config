@@ -1,5 +1,6 @@
 ## In order to retrieve and/or install Windows Optional Features this script needs to run with admin privileges
 #Requires -RunAsAdministrator
+
 function Install-WSLFeature{
     ## First we need to make sure the WSL feature is installed, if not install and reboot afterwards 
     if($null -eq (Get-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Subsystem-Linux)){
