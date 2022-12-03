@@ -1,2 +1,2 @@
 ansible_conncttion: ssh
-ansible_user: 
+ansible_user: svc_ansible
