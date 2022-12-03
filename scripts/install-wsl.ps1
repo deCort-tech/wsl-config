@@ -29,14 +29,14 @@ function Install-WSLFeature{
 }
 Install-WSLFeature
 
-
 function Get-WSLDistribution{
     ## Then we bootstrap the host and install WSL and Ansible
     ## We can check if the correct distro is already installed, if not we run the install command
-    $wsl = wsl -l | Where-Object {$_.Replace("`0","") -match '20.04'}
-    $distro = "Ubuntu-20.04"
+    $script:wsl = wsl -l | Where-Object {$_.Replace("`0","") -match '20.04'}
+    $script:distro = "Ubuntu-20.04"
 }
 Get-WSLDistribution
+
 function Set-WSLUsernamePassword{
     ## Set username and password (if existing install please enter your current user credentials otherwise create a new one)
     Write-Host "Please fill in your username"
@@ -105,7 +105,6 @@ function Set-AnsibleConfig{
     ## Set the privileges
     wsl -u root -d $distro usermod -aG adm,sudo "$ansibleuser"
 }
-
 Set-AnsibleConfig
 
 
