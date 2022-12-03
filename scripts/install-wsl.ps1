@@ -1,5 +1,5 @@
 ## In order to retrieve and/or install Windows Optional Features this script needs to run with admin privileges
-#equires -RunAsAdministrator
+#Requires -RunAsAdministrator
 function Install-WSLFeature{
     ## First we need to make sure the WSL feature is installed, if not install and reboot afterwards 
     if($null -eq (Get-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Subsystem-Linux)){
@@ -27,12 +27,16 @@ function Install-WSLFeature{
         Restart-Computer -Wait 1
     }
 }
+Install-WSLFeature
 
-## Then we bootstrap the host and install WSL and Ansible
-## We can check if the correct distro is already installed, if not we run the install command
-$wsl = wsl -l | Where-Object {$_.Replace("`0","") -match '20.04'}
-$distro = "Ubuntu-20.04"
 
+function Get-WSLDistribution{
+    ## Then we bootstrap the host and install WSL and Ansible
+    ## We can check if the correct distro is already installed, if not we run the install command
+    $wsl = wsl -l | Where-Object {$_.Replace("`0","") -match '20.04'}
+    $distro = "Ubuntu-20.04"
+}
+Get-WSLDistribution
 function Set-WSLUsernamePassword{
     ## Set username and password (if existing install please enter your current user credentials otherwise create a new one)
     Write-Host "Please fill in your username"
@@ -44,6 +48,7 @@ function Set-WSLUsernamePassword{
     $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($password)
     $script:plainpassword = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
 }
+Set-WSLUsernamePassword
 
 function Install-WSLDistribution{
     ## If WSL is not installed we install it
@@ -64,14 +69,15 @@ function Install-WSLDistribution{
         wsl -u root -d $distro usermod -aG adm,cdrom,sudo,dip,plugdev "$username"
     }
 }
+Install-WSLDistribution
 
 function Set-WSLDefaults{
     ## Set WSL2 as default and set the Ubuntu-20.04 distro as default (if this is not yet the case already)
     wsl --set-default-version 2
     wsl --setdefault $distro
 }
-
 Set-WSLDefaults
+
 function Install-WSLPackages{
     ## Let's make sure all our packages are up-to-date
     wsl -u $username /bin/bash -c "echo $plainpassword | sudo -S apt update -y && sudo -S apt upgrade -y"
@@ -80,8 +86,8 @@ function Install-WSLPackages{
     ## Now install Ansible for the second stage of this deployment
     wsl -u $username /bin/bash -c "echo $plainpassword | sudo -S apt install ansible -y"
 }
-
 Install-WSLPackages
+
 function Set-AnsibleConfig{
     ## Import System.Web Assembly
     Add-Type -AssemblyName System.Web
