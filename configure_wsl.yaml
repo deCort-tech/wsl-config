@@ -2,4 +2,4 @@
 hosts: localhost
 
 include_roles:
-  - wsl_configure_wsl
+  - configure_wsl
