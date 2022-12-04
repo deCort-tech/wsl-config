@@ -142,7 +142,7 @@ function Install-WSL{
     Install-WSLPackages
 
     function Set-AnsibleConfig{
-        Write-Host "Creating Ansible Service Account"
+        Write-Host "Creating Ansible Service Account" -BackgroundColor Green
         ## Import System.Web Assembly
         Add-Type -AssemblyName System.Web
         ## Now we are going to create a service account under which our Ansible Playbook can run
