@@ -1,3 +1,25 @@
 ---
-- name: test
+- name: create empty wsl config file
+  ansible.builtin.file:
+    path: /etc/wsl.conf
+    state: touch
+    owner: root
+    group: root
+
+- name: Set the default user in /etc/wsl.conf
+  ansible.builtin.blockinfile:
+    path: /etc/wsl.conf
+    block: |
+      [user]
+      default="{{ username }}"
+
+- name: Enable Systemd by editing /etc/wsl.conf
+  ansible.builtin.blockinfile:
+    path: /etc/wsl.conf
+    block: |
+      
+      [boot]
+      systemd=true
+
+  
   
