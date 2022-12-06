@@ -173,27 +173,37 @@ function Install-WSL {
 
         ## Now we create the user inside
         Write-Host "Creating Ansible Service Account" -BackgroundColor Green
-        wsl -u root -d $distro useradd -m "$ansibleuser"
+        wsl -u root useradd -m "$ansibleuser"
 
         ## Set the password
         Write-Host "Setting password for $ansibleuser" -BackgroundColor Green
-        wsl -u root -d $distro /bin/bash -c "echo '${ansibleuser}:${ansiblepassword}' | chpasswd"
+        wsl -u root /bin/bash -c "echo '${ansibleuser}:${ansiblepassword}' | chpasswd"
 
         ## Change login shell to bash
         Write-Host "Changing login shell to /bin/bash for $ansibleuser" -BackgroundColor Green
-        wsl -u root -d $distro chsh -s /bin/bash "$ansibleuser"
+        wsl -u root chsh -s /bin/bash "$ansibleuser"
 
         ## Set the privileges
         Write-Host "Setting user permissions for $ansibleuser" -BackgroundColor Green
-        wsl -u root -d $distro usermod -aG adm, sudo "$ansibleuser"
+        wsl -u root usermod -aG adm, sudo "$ansibleuser"
 
         ## Create Ansible Vault password file
         Write-Host "Creating Ansible Vault password file" -BackgroundColor Green
-        wsl -u $ansibleuser -d $distro /bin/bash -c "cd ~/ && echo '$vaultpassword' > .vault_password.txt && chmod 600 .vault_password.txt"
+        wsl -u $ansibleuser /bin/bash -c "cd ~/ && echo '$vaultpassword' > .vault_password.txt && chmod 600 .vault_password.txt"
         
         ## Create Ansible Vault encrypted variable file
         Write-Host "Creating Ansible Vault encrypted variable file" -BackgroundColor Green
-        wsl -u $ansibleuser -d $distro /bin/bash -c "cd ../group_vars/localhost && echo 'ansible_password:$ansiblepassword' > vault && ansible-vault encrypt vault --vault-password-file=~/.vault_password.txt --encrypt-vault-id default"
+        wsl -u $ansibleuser /bin/bash -c "cd ../group_vars/localhost && echo ansible_password: `"$ansiblepassword`" > vault && ansible-vault encrypt vault --vault-password-file=~/.vault_password.txt --encrypt-vault-id default"
+
+        ## Update Ansible vars file for the configure_wsl role by setting the username variable
+        Write-Host "Creating username vars file ..\roles\configure_wsl\vars\username.yaml" -BackgroundColor Green
+        New-Item -Path "..\roles\configure_wsl\vars\username.yaml"
+        Add-Content -Path "..\roles\configure_wsl\vars\username.yaml" -Value "username: $username"
+        
+        ## Copy the Ansible.cfg file to the svc_ansible's home directory
+        Write-Host "Copy the ansible.cfg to the svc_ansible's home directory" -BackgroundColor Green
+        wsl -u $ansibleuser /bin/bash -c "cp ../ansible_config/ansible.cfg ~/ansible.cfg && chown '${ansibleuser}:${ansibleuser}' ~/ansible.cfg && chmod 0644 ~/ansible.cfg"
+
     }
     Set-AnsibleConfig
 }
