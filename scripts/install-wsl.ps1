@@ -12,9 +12,9 @@ $Metadata = @{
 }
 #>
 
-## In order to retrieve and/or install Windows Optional Features this script needs to run with admin privileges
+## In order to check and/or install Windows Optional Features this script needs to run with admin privileges
 #equires -RunAsAdministrator
-function Install-WSL{
+function Install-WSL {
     <#
     .SYNOPSIS
         This script installs WSL (if needed) and configures it and prepares for stage 2 configuration via Ansible.
@@ -34,32 +34,50 @@ function Install-WSL{
 
     [CmdletBinding()]
     Param(
-        [parameter(Mandatory=$true)]
-        [string]$username
+        [parameter(Mandatory = $true)]
+        [string]$Username
     )
 
-    function Get-Password{
-        ## Function to get the Password
-        Write-Host "Please fill in your password"
-        $script:password = Read-Host -AsSecureString
+    function Start-Sleep($seconds) {
+        $sleepdate = (Get-Date).AddSeconds($seconds)
+        
+        while ($sleepdate -gt (Get-Date)) {
+            $secondsLeft = $sleepdate.Subtract((Get-Date)).TotalSeconds
+            $percent = ($seconds - $secondsLeft) / $seconds * 100
+            Write-Progress -Activity "Waiting" -Status "Waiting..." -SecondsRemaining $secondsLeft -PercentComplete $percent
+            [System.Threading.Thread]::Sleep(500)
+        }
+        Write-Progress -Activity "Waiting" -Status "Waiting..." -SecondsRemaining 0 -Completed
+    }
+
+    function Get-Password {
+        ## Function to get the Password and compare it
+        do {
+            $password = Read-Host -AsSecureString -Prompt "Please fill in your password"
+            $password_confirm = Read-Host -AsSecureString -Prompt "Please Re-enter your password"
+
+            $script:plainpassword = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($password))
+            $plainpassword_confirm = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($password_confirm))
+
+        } until ($plainpassword -eq $plainpassword_confirm)
     }
     Get-Password
 
-    function Install-WSLFeature{
+    function Install-WSLFeature {
         ## First we need to make sure the WSL feature is installed, if not install and reboot afterwards 
-        if($null -eq (Get-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Subsystem-Linux)){
+        if ($null -eq (Get-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Subsystem-Linux)) {
             ## Enable WSL and Virtual Machine Platform features
             Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Subsystem-Linux -NoRestart
             Enable-WindowsOptionalFeature -Online -FeatureName VirtualMachinePlatform -NoRestart
             
             ## Create temp directory if it does not exist
             $tmp = "C:\temp"
-            if($null -eq (Test-Path $tmp)){
+            if ($null -eq (Test-Path $tmp)) {
                 
                 New-Item $tmp
             
             }
-            else{}
+            else {}
             
             ## Copy the script to the temp directory
             Copy-Item -Path ".\install-wsl.ps1" -Destination $tmp 
@@ -74,43 +92,45 @@ function Install-WSL{
     }
     Install-WSLFeature
 
-    function Get-WSLDistribution{
+    function Get-WSLDistribution {
         ## Then we bootstrap the host and install WSL and Ansible
         ## We can check if the correct distro is already installed, if not we run the install command
-        $script:wsl = wsl -l | Where-Object {$_.Replace("`0","") -match '20.04'}
+        Write-Host "Checking if the correct distribution is installed" -BackgroundColor Green
+        $script:wsldistro = wsl -l | Where-Object { $_.Replace("`0", "") -match '20.04' }
         $script:distro = "Ubuntu-20.04"
     }
     Get-WSLDistribution
-
-    function ConvertTo-Plaintext{
-        ## Decode the password so it can be used inside the bash shell
-        $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($password)
-        $script:plainpassword = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
-    }
-    ConvertTo-Plaintext
-
-    function Install-WSLDistribution{
+    
+    function Install-WSLDistribution {
         ## If WSL is not installed we install it
-        if($null -eq $wsl){
+        if ($null -eq $wsldistro) {
             ## Install the distro as root so we can create a user
             wsl --install --d $distro
+            
             ## Now we got to wait a few minutes in order for the distro to install before we can continue on
             Write-Host "Waiting 1 minute before continuing on" -BackgroundColor Green
-            Start-Sleep -Seconds 60
+            Start-Sleep(60)
+            
             ## Add new user
             Write-Host "Creating new user $username" -BackgroundColor Green
             wsl -u root -d $distro useradd -m "$username"
+            
             ## Set the password
+            Write-Host "Setting password for user $username" -BackgroundColor Green
             wsl -u root -d $distro /bin/bash -c "echo '${username}:${plainpassword}' | chpasswd"
+            
             ## Change login shell to bash
+            Write-Host "Changing login shell to /bin/bash for user $username" -BackgroundColor Green
             wsl -u root -d $distro chsh -s /bin/bash "$username"
+            
             ## Set the privileges
-            wsl -u root -d $distro usermod -aG adm,cdrom,sudo,dip,plugdev "$username"
+            Write-Host "Setting user permissions for user $username" -BackgroundColor Green
+            wsl -u root -d $distro usermod -aG adm, cdrom, sudo, dip, plugdev "$username"
         }
     }
     Install-WSLDistribution
 
-    function Set-WSLDefaults{
+    function Set-WSLDefaults {
         ## Set WSL2 as default and set the Ubuntu-20.04 distro as default (if this is not yet the case already)
         Write-Host "Setting WSL Defaults" -BackgroundColor Green
         wsl --set-default-version 2
@@ -118,7 +138,7 @@ function Install-WSL{
     }
     Set-WSLDefaults
 
-    function Install-WSLPackages{
+    function Install-WSLPackages {
         ## Let's make sure all our packages are up-to-date
         Write-Host "Installing updates" -BackgroundColor Green
         wsl -u $username /bin/bash -c "echo $plainpassword | sudo -S apt update -y && sudo -S apt upgrade -y"
@@ -141,27 +161,38 @@ function Install-WSL{
     }
     Install-WSLPackages
 
-    function Set-AnsibleConfig{
-        Write-Host "Creating Ansible Service Account" -BackgroundColor Green
+    function Set-AnsibleConfig {
         ## Import System.Web Assembly
         Add-Type -AssemblyName System.Web
+
         ## Now we are going to create a service account under which our Ansible Playbook can run
         ## First we are going to generate a random password for this account.
         $ansibleuser = "svc_ansible"
-        $script:ansiblepassword = [System.Web.Security.Membership]::GeneratePassword(16,4)
-        $script:vaultpassword = [System.Web.Security.Membership]::GeneratePassword(16,4)
+        $script:ansiblepassword = [System.Web.Security.Membership]::GeneratePassword(16, 4)
+        $script:vaultpassword = [System.Web.Security.Membership]::GeneratePassword(16, 4)
 
         ## Now we create the user inside
+        Write-Host "Creating Ansible Service Account" -BackgroundColor Green
         wsl -u root -d $distro useradd -m "$ansibleuser"
+
         ## Set the password
+        Write-Host "Setting password for $ansibleuser" -BackgroundColor Green
         wsl -u root -d $distro /bin/bash -c "echo '${ansibleuser}:${ansiblepassword}' | chpasswd"
+
         ## Change login shell to bash
+        Write-Host "Changing login shell to /bin/bash for $ansibleuser" -BackgroundColor Green
         wsl -u root -d $distro chsh -s /bin/bash "$ansibleuser"
+
         ## Set the privileges
-        wsl -u root -d $distro usermod -aG adm,sudo "$ansibleuser"
+        Write-Host "Setting user permissions for $ansibleuser" -BackgroundColor Green
+        wsl -u root -d $distro usermod -aG adm, sudo "$ansibleuser"
+
         ## Create Ansible Vault password file
+        Write-Host "Creating Ansible Vault password file" -BackgroundColor Green
         wsl -u $ansibleuser -d $distro /bin/bash -c "cd ~/ && echo '$vaultpassword' > .vault_password.txt && chmod 600 .vault_password.txt"
+        
         ## Create Ansible Vault encrypted variable file
+        Write-Host "Creating Ansible Vault encrypted variable file" -BackgroundColor Green
         wsl -u $ansibleuser -d $distro /bin/bash -c "cd ../group_vars/localhost && echo 'ansible_password:$ansiblepassword' > vault && ansible-vault encrypt vault --vault-password-file=~/.vault_password.txt --encrypt-vault-id default"
     }
     Set-AnsibleConfig
