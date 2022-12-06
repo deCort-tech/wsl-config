@@ -1,5 +1,5 @@
 ---
-hosts: localhost
-
-include_roles:
-  - configure_wsl
+- name: Stage 2 Configuration WSL IaC Development Environment
+  hosts: localhost
+  roles:
+    - configure_wsl
