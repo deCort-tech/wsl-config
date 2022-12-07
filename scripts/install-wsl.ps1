@@ -109,7 +109,7 @@ function Install-WSL {
             
             ## Now we got to wait a few minutes in order for the distro to install before we can continue on
             Write-Host "Waiting 1 minute before continuing on" -BackgroundColor Green
-            Start-Sleep(60)
+            Start-Sleep(75)
             
             ## Add new user
             Write-Host "Creating new user $username" -BackgroundColor Green
@@ -125,7 +125,7 @@ function Install-WSL {
             
             ## Set the privileges
             Write-Host "Setting user permissions for user $username" -BackgroundColor Green
-            wsl -u root -d $distro usermod -aG adm, cdrom, sudo, dip, plugdev "$username"
+            wsl -u root -d $distro usermod -aG adm,cdrom,sudo,dip,plugdev "$username"
         }
     }
     Install-WSLDistribution
@@ -185,7 +185,15 @@ function Install-WSL {
 
         ## Set the privileges
         Write-Host "Setting user permissions for $ansibleuser" -BackgroundColor Green
-        wsl -u root usermod -aG adm, sudo "$ansibleuser"
+        wsl -u root usermod -aG adm,sudo "$ansibleuser"
+
+        ## Creating SSH key
+        Write-Host "Creating SSH key" -BackgroundColor Green
+        wsl -u $ansibleuser /bin/bash -c "< /dev/zero ssh-keygen -q -N ''"
+
+        ## Add SSH key to SSH Agent
+        Write-Host "Adding SSH Key to SSH Agent" -BackgroundColor Green
+        wsl -u $ansibleuser /bin/bash -c "echo '$ansiblepassword' | sudo -S ssh-agent bash && ssh-add ~/.ssh/id_rsa"
 
         ## Create Ansible Vault password file
         Write-Host "Creating Ansible Vault password file" -BackgroundColor Green
@@ -193,7 +201,7 @@ function Install-WSL {
         
         ## Create Ansible Vault encrypted variable file
         Write-Host "Creating Ansible Vault encrypted variable file" -BackgroundColor Green
-        wsl -u $ansibleuser /bin/bash -c "cd ../group_vars/localhost && echo ansible_password: `"$ansiblepassword`" > vault && ansible-vault encrypt vault --vault-password-file=~/.vault_password.txt --encrypt-vault-id default"
+        wsl -u $ansibleuser /bin/bash -c "cd ../group_vars/localhost && echo ansible_password: '$ansiblepassword' > vault && ansible-vault encrypt vault --vault-password-file=~/.vault_password.txt --encrypt-vault-id default"
 
         ## Update Ansible vars file for the configure_wsl role by setting the username variable
         Write-Host "Creating username vars file ..\roles\configure_wsl\vars\username.yaml" -BackgroundColor Green
@@ -202,9 +210,20 @@ function Install-WSL {
         
         ## Copy the Ansible.cfg file to the svc_ansible's home directory
         Write-Host "Copy the ansible.cfg to the svc_ansible's home directory" -BackgroundColor Green
-        wsl -u $ansibleuser /bin/bash -c "cp ../ansible_config/ansible.cfg ~/ansible.cfg && chown '${ansibleuser}:${ansibleuser}' ~/ansible.cfg && chmod 0644 ~/ansible.cfg"
+        wsl -u $ansibleuser /bin/bash -c "cp ../ansible_config/ansible.cfg ~/.ansible.cfg && chown '${ansibleuser}:${ansibleuser}' ~/.ansible.cfg && chmod 0644 ~/.ansible.cfg"
 
     }
     Set-AnsibleConfig
+
+    function Start-AnsiblePlaybook{
+        ## Start Ansible Playbook to start stage 2 of the configuration
+        Write-Host "Starting Ansible Playbook to start stage 2 of the configuration" -BackgroundColor Green
+        wsl -u $ansibleuser /bin/bash -c "ansible-playbook ../configure_wsl.yaml -i ../inventories/localhost.ini --vault-password-file ~/.vault_password.txt"
+
+        ## To enable systemd we need to reboot/shutdown the instance
+        Write-Host "Resetting system to enable systemd" -BackgroundColor Green
+        wsl --shutdown
+    }
+    Start-AnsiblePlaybook
 }
 Install-WSL
