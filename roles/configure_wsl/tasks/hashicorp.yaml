@@ -5,19 +5,19 @@
     dest: "/tmp/hashicorp_gpg"
 
 - name: Add the Hashicorp GPG key
-  ansible.builtin.shell:
-    cmd: "gpg --dearmor /tmp/hashicorp_gpg | tee {{ hashicorp_gpg_keyring }}"
+  shell: 
+    cmd: "gpg --dearmor /tmp/hashicorp_gpg && mv /tmp/hashicorp_gpg.gpg {{ hashicorp_gpg_keyring }}"
   become: true
 
 - name: Verify the GPG key register as verify_gpg
-  ansible.builtin.shell:
+  shell:
     cmd: "gpg --no-default-keyring --keyring {{ hashicorp_gpg_keyring }} --fingerprint"
   register: verify_gpg
 
 - name: Do the actual verification with the known good --fingerprint"
   ansible.builtin.fail:
     msg: "Hashicorp GPG Key does not match with known good fingerprint"
-    when: verify_gpg != hashicorp_gpg_fingerprint
+  when:  "'E8A0 32E0 94D8 EB4E A189 D270 DA41 8C88 A321 9F7B' not in verify_gpg"
 
 - name: Add the Packer repository
   ansible.builtin.apt_repository:
