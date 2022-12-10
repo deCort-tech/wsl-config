@@ -1,5 +1,14 @@
 ---
+## Unbuntu Release
 lsb_release: "focal"
+
+## Hashicorp Vars
 hashicorp_gpg_url: "https://apt.releases.hashicorp.com/gpg"
 hashicorp_gpg_fingerprint: "E8A0 32E0 94D8 EB4E A189  D270 DA41 8C88 A321 9F7B" ## https://www.hashicorp.com/security
 hashicorp_gpg_keyring: "/usr/share/keyrings/hashicorp-archive-keyring.gpg"
+
+## Kubernetes Vars
+kubernetes_gpg_url: "https://packages.cloud.google.com/apt/doc/apt-key.gpg"
+kubernetes_gpg_fingerprint: "A362 B822 F6DE DC65 2817  EA46 B53D C80D 13ED EF05" 
+kubernetes_gpg_keyring: "/usr/share/keyrings/kubernetes-archive-keyring.gpg"
+kustomize_script_url: "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
