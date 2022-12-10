@@ -9,3 +9,5 @@ Applications that will be installed:
 - Kubectl
 - Helm
 - Kustomize
+- Azure CLI
+- Amazon AWS CLI
