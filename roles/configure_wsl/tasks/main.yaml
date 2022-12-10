@@ -1,6 +1,8 @@
 ---
 - include_tasks: wsl.yaml
 - include_tasks: hashicorp.yaml
+- include_tasks: kubernetes.yaml
+
 
   
 
