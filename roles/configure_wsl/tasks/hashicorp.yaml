@@ -14,14 +14,14 @@
     cmd: "gpg --no-default-keyring --keyring {{ hashicorp_gpg_keyring }} --fingerprint"
   register: verify_gpg
 
-- name: Extract only the GPG key from the verify_gpg
+- name: Extract only the GPG fingerprint from the verify_gpg fact
   set_fact:
-    gpg_key: "{{ verify_gpg.stdout | regex_search('([A-Za-z0-9]+( [A-Za-z0-9]+)+)\\s+([A-Za-z0-9]+( [A-Za-z0-9]+)+)') }}"  
+    gpg_fingerprint: "{{ verify_gpg.stdout | regex_search('([A-Za-z0-9]+( [A-Za-z0-9]+)+)\\s+([A-Za-z0-9]+( [A-Za-z0-9]+)+)') }}"  
 
 - name: Fail if retrieved GPG fingerprint does not match with the known good fingerprint
   ansible.builtin.fail:
     msg: "Hashicorp GPG Key does not match with known good fingerprint"
-  when: gpg_key not in hashicorp_gpg_fingerprint
+  when: gpg_fingerprint not in hashicorp_gpg_fingerprint
 
 - name: Add the Hashicorp Repository
   ansible.builtin.apt_repository:
