@@ -147,6 +147,10 @@ function Install-WSL {
         Write-Host "Rebooting WSL" -BackgroundColor Green
         wsl --shutdown
 
+        ## Wait 8 Seconds before continuing
+        Write-Host "Waiting 8 seconds" -BackgroundColor Green
+        Start-Sleep(8)
+
         ## Clean up unneeded packages
         Write-Host "Cleaning up packages" -BackgroundColor Green
         wsl -u $username /bin/bash -c "echo $plainpassword | sudo -S apt autoremove -y"
@@ -197,7 +201,7 @@ function Install-WSL {
 
         ## Create Ansible Vault password file
         Write-Host "Creating Ansible Vault password file" -BackgroundColor Green
-        wsl -u $ansibleuser /bin/bash -c "cd ~/ && echo '$vaultpassword' > .vault_password.txt && chmod 600 .vault_password.txt"
+        wsl -u $ansibleuser /bin/bash -c "echo '$vaultpassword' > ~/.vault_password.txt && chmod 600 ~/.vault_password.txt"
         
         ## Create Ansible Vault encrypted variable file
         Write-Host "Creating Ansible Vault encrypted variable file" -BackgroundColor Green
