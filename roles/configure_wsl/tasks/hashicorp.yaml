@@ -14,38 +14,38 @@
     cmd: "gpg --no-default-keyring --keyring {{ hashicorp_gpg_keyring }} --fingerprint"
   register: verify_gpg
 
-- name: Do the actual verification with the known good --fingerprint"
+- name: Extract only the GPG key from the verify_gpg
+  set_fact:
+    gpg_key: "{{ verify_gpg.stdout | regex_search('([A-Za-z0-9]+( [A-Za-z0-9]+)+)\\s+([A-Za-z0-9]+( [A-Za-z0-9]+)+)') }}"  
+
+- name: Fail if retrieved GPG fingerprint does not match with the known good fingerprint
   ansible.builtin.fail:
     msg: "Hashicorp GPG Key does not match with known good fingerprint"
-  when:  "'E8A0 32E0 94D8 EB4E A189 D270 DA41 8C88 A321 9F7B' not in verify_gpg"
+  when: gpg_key not in hashicorp_gpg_fingerprint
 
-- name: Add the Packer repository
+- name: Add the Hashicorp Repository
   ansible.builtin.apt_repository:
-    repo: "deb [signed-by={{ hashicorp_gpg_keyring }} arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+    repo: "deb [signed-by={{ hashicorp_gpg_keyring }}] https://apt.releases.hashicorp.com {{ lsb_release }} main"
+    filename: hashicorp
     state: present
-
-- name: Add the Terraform repository
-  ansible.builtin.apt_repository:
-    repo: "deb [signed-by={{ hashicorp_gpg_keyring }} arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
-
-- name: Download package information
-  ansible.builtin.apt:
-    update_cache: yes
+  become: true
   
 - name: Install Packer
   ansible.builtin.apt:
     name: packer={{ packer_version }}
     state: present
+  become: true
 
 - name: Install Terraform
   ansible.builtin.apt:
     name: terraform={{ terraform_version }}
     state: present
+  become: true
 
 - name: Check if Packer is correctly installed
-  ansible.builtin.command:
+  command:
     cmd: packer --version
 
 - name: Check if Terraform is correctly installed
-  ansible.builtin.command:
+  command:
     cmd: terraform -version
