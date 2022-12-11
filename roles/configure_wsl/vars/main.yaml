@@ -20,3 +20,8 @@ helm_gpg_keyring: "/usr/share/keyrings/helm.gpg"
 microsoft_gpg_url: "https://packages.microsoft.com/keys/microsoft.asc"
 microsoft_gpg_fingerprint: "BC52 8686 B50D 79E3 39D3  721C EB3E 94AD BE12 29CF" 
 microsoft_gpg_keyring: "/usr/share/keyrings/microsoft.gpg"
+
+## AWS Vars
+aws_installer_url: "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
+aws_signature_url: "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip.sig"
+aws_gpg_fingerprint: "FB5D B77F D5C1 18B8 0511  ADA8 A631 0ACC 4672 475C"
