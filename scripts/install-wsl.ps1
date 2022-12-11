@@ -13,7 +13,7 @@ $Metadata = @{
 #>
 
 ## In order to check and/or install Windows Optional Features this script needs to run with admin privileges
-#equires -RunAsAdministrator
+#Requires -RunAsAdministrator
 function Install-WSL {
     <#
     .SYNOPSIS
