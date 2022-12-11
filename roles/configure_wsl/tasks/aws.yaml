@@ -1,0 +1,50 @@
+---
+- name: install AWS-CLI dependency
+  ansible.builtin.apt:
+    name: unzip
+    state: present
+  become: true
+  
+- name: Get the AWS-CLI installer
+  ansible.builtin.get_url:
+    url: "{{ aws_installer_url }}"
+    dest: "/tmp/aws-cli.zip"
+
+- name: Import the AWS-CLI PGP Public Key
+  shell:
+    cmd: gpg --import /tmp/aws-cli-pgp-public-key
+
+- name: Get the AWS-CLI GPG signature file
+  ansible.builtin.get_url:
+    url: "{{ aws_signature_url }}"
+    dest: "/tmp/aws_signature"
+
+- name: Verify the GPG key register as verify_gpg
+  shell:
+    cmd: "gpg --verify /tmp/aws_signature /tmp/aws-cli.zip"
+  register: verify_gpg
+
+- name: Extract only the GPG fingerprint from the verify_gpg fact
+  set_fact:
+    gpg_fingerprint: "{{ verify_gpg.stderr | regex_search('0511\\s\\sADA8\\sA631\\s0ACC\\s4672\\s475C') }}" ## Somehow we get correct output in stderror instead of stdout and need to carve out the complete fingerprint
+
+- name: Fail if retrieved GPG fingerprint does not match with the known good fingerprint
+  ansible.builtin.fail:
+    msg: "AWS-CLI GPG fingerprint does not match with known good fingerprint"
+  when: gpg_fingerprint not in aws_gpg_fingerprint
+
+- name: Create the aws-cli unzip directory
+  ansible.builtin.file:
+    path: /tmp/aws-cli
+    state: directory
+    mode: 0755
+
+- name: Unzip the AWS-CLI installer
+  ansible.builtin.unarchive:
+    src: "/tmp/aws-cli.zip"
+    dest: /tmp/aws-cli
+
+- name: Install AWS-CLI
+  shell:
+    cmd: /tmp/aws-cli/aws/install
+  become: true
