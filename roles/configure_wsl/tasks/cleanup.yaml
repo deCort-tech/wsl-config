@@ -1,0 +1,15 @@
+---
+- name: Remove file (delete file)
+  ansible.builtin.file:
+    path: /tmp/{{ item }}
+    state: absent
+  with_items:
+    - aws-cli
+    - aws-cli-pgp-public-key
+    - aws-cli.zip
+    - aws_signature
+    - hashicorp_gpg
+    - helm_gpg
+    - install_kustomize.sh
+    - kubernetes_gpg
+    - microsoft_gpgazu
