@@ -1,0 +1,13 @@
+---
+- include_tasks: wsl.yaml
+- include_tasks: hashicorp.yaml
+- include_tasks: kubernetes.yaml
+- include_tasks: azure.yaml
+- include_tasks: aws.yaml
+- include_tasks: cleanup.yaml
+
+
+  
+
+  
+  

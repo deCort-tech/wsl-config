@@ -1,0 +1,51 @@
+---
+- name: Get Hashicorp GPG key
+  ansible.builtin.get_url:
+    url: "{{ hashicorp_gpg_url }}"
+    dest: "/tmp/hashicorp_gpg"
+
+- name: Add the Hashicorp GPG key
+  shell: 
+    cmd: "gpg --dearmor /tmp/hashicorp_gpg && mv /tmp/hashicorp_gpg.gpg {{ hashicorp_gpg_keyring }}"
+  become: true
+
+- name: Verify the GPG key register as verify_gpg
+  shell:
+    cmd: "gpg --no-default-keyring --keyring {{ hashicorp_gpg_keyring }} --fingerprint"
+  register: verify_gpg
+
+- name: Extract only the GPG fingerprint from the verify_gpg fact
+  set_fact:
+    gpg_fingerprint: "{{ verify_gpg.stdout | regex_search('([A-Za-z0-9]+( [A-Za-z0-9]+)+)\\s+([A-Za-z0-9]+( [A-Za-z0-9]+)+)') }}"  
+
+- name: Fail if retrieved GPG fingerprint does not match with the known good fingerprint
+  ansible.builtin.fail:
+    msg: "Hashicorp GPG Key does not match with known good fingerprint"
+  when: gpg_fingerprint not in hashicorp_gpg_fingerprint
+
+- name: Add the Hashicorp Repository
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by={{ hashicorp_gpg_keyring }}] https://apt.releases.hashicorp.com {{ lsb_release }} main"
+    filename: hashicorp
+    state: present
+  become: true
+  
+- name: Install Packer
+  ansible.builtin.apt:
+    name: packer={{ packer_version }}
+    state: present
+  become: true
+
+- name: Install Terraform
+  ansible.builtin.apt:
+    name: terraform={{ terraform_version }}
+    state: present
+  become: true
+
+- name: Check if Packer is correctly installed
+  command:
+    cmd: packer --version
+
+- name: Check if Terraform is correctly installed
+  command:
+    cmd: terraform -version

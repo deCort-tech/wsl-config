@@ -1,0 +1,105 @@
+---
+- name: Install Kubernetes apt repo requirements
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - ca-certificates
+    - curl
+    - apt-transport-https
+  become: true
+
+- name: Get Kubernetes (Google Cloud) GPG Singing Key
+  ansible.builtin.get_url:
+    url: "{{ kubernetes_gpg_url }}"
+    dest: "/tmp/kubernetes_gpg"
+
+- name: Add the Kubernetes (Google Cloud) GPG key
+  shell: 
+    cmd: "gpg --dearmor /tmp/kubernetes_gpg && mv /tmp/kubernetes_gpg.gpg {{ kubernetes_gpg_keyring }}"
+  become: true
+
+- name: Verify the GPG key register as verify_gpg
+  shell:
+    cmd: "gpg --no-default-keyring --keyring {{ kubernetes_gpg_keyring }} --fingerprint"
+  register: verify_gpg
+
+- name: Extract only the GPG fingerprint from the verify_gpg fact
+  set_fact:
+    gpg_fingerprint: "{{ verify_gpg.stdout | regex_search('([A-Za-z0-9]+( [A-Za-z0-9]+)+)\\s+([A-Za-z0-9]+( [A-Za-z0-9]+)+)') }}"  
+
+- name: Fail if retrieved GPG fingerprint does not match with the known good fingerprint
+  ansible.builtin.fail:
+    msg: "Kubernetes GPG fingerprint does not match with known good fingerprint"
+  when: gpg_fingerprint not in kubernetes_gpg_fingerprint
+
+- name: Add the Kubernetes Repository
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by={{ kubernetes_gpg_keyring }}] https://apt.kubernetes.io/ kubernetes-xenial main"
+    filename: kubernetes
+    state: present
+  become: true
+
+- name: Install kubectl
+  ansible.builtin.apt:
+    name: kubectl={{ kubectl_version }}
+    state: present
+  become: true
+
+- name: Get the Kustomize installation script
+  ansible.builtin.get_url:
+    url: "{{ kustomize_script_url }}"
+    dest: "/tmp/install_kustomize.sh"
+
+- name: Set Kustomize install script as executable
+  ansible.builtin.file:
+    path: /tmp/install_kustomize.sh
+    mode: 0700
+
+- name: Change the script to alter the install directory from $PWD to /usr/local/bin
+  lineinfile:
+    path: /tmp/install_kustomize.sh
+    regexp: "\\$PWD"
+    line: "where=/usr/local/bin"
+
+- name: Install Kustomize
+  shell:
+    cmd: /tmp/install_kustomize.sh
+  become: true
+
+- name: Get Helm GPG Singing Key
+  ansible.builtin.get_url:
+    url: "{{ helm_gpg_url }}"
+    dest: "/tmp/helm_gpg"
+
+- name: Add the Helm GPG key
+  shell: 
+    cmd: "gpg --dearmor /tmp/helm_gpg && mv /tmp/helm_gpg.gpg {{ helm_gpg_keyring }}"
+  become: true
+
+- name: Verify the GPG key register as verify_gpg
+  shell:
+    cmd: "gpg --no-default-keyring --keyring {{ helm_gpg_keyring }} --fingerprint"
+  register: verify_gpg
+
+- name: Extract only the GPG fingerprint from the verify_gpg fact
+  set_fact:
+    gpg_fingerprint: "{{ verify_gpg.stdout | regex_search('([A-Za-z0-9]+( [A-Za-z0-9]+)+)\\s+([A-Za-z0-9]+( [A-Za-z0-9]+)+)') }}"  
+
+- name: Fail if retrieved GPG fingerprint does not match with the known good fingerprint
+  ansible.builtin.fail:
+    msg: "Kubernetes GPG fingerprint does not match with known good fingerprint"
+  when: gpg_fingerprint not in helm_gpg_fingerprint
+
+- name: Add the Helm Repository
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by={{ helm_gpg_keyring }}] https://baltocdn.com/helm/stable/debian/ all main"
+    filename: helm
+    state: present
+  become: true
+
+- name: Install Helm
+  ansible.builtin.apt:
+    name: helm={{ helm_version }}
+    state: present
+  become: true

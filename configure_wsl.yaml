@@ -1,0 +1,5 @@
+---
+- name: Stage 2 Configuration of the Windows Subsystem for Linux Ubuntu 20.04 instance
+  hosts: localhost
+  roles:
+    - configure_wsl

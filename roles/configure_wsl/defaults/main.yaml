@@ -1,0 +1,11 @@
+---
+## Hashicorp defaults
+packer_version: "1.8.4-1"
+terraform_version: "1.3.6"
+
+## Kubernetes defaults
+kubectl_version: "1.26.0-00"
+helm_version: "3.10.2-1"
+
+## Azure defaults
+azure_cli_version: "2.43.0-1~focal"

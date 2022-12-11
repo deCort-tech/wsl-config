@@ -1,0 +1,23 @@
+---
+- name: include our username.yaml vars file
+  ansible.builtin.include_vars:
+    file: ../vars/username.yaml
+
+- name: create empty wsl config file
+  ansible.builtin.file:
+    path: /etc/wsl.conf
+    state: touch
+    owner: root
+    group: root
+  become: true
+
+- name: Set wsl config file, configuring default user and enabling systemd
+  ansible.builtin.blockinfile:
+    path: /etc/wsl.conf
+    block: |
+      [user]
+      default={{ username }}
+      
+      [boot]
+      systemd=true    
+  become: true

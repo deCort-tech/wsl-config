@@ -1,0 +1,45 @@
+---
+- name: Install Azure-CLI apt repo requirements
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - gnupg
+  become: true
+
+- name: Get Microsoft GPG Singing Key
+  ansible.builtin.get_url:
+    url: "{{ microsoft_gpg_url }}"
+    dest: "/tmp/microsoft_gpg"
+
+- name: Add the Microsoft GPG key
+  shell: 
+    cmd: "gpg --dearmor /tmp/microsoft_gpg && mv /tmp/microsoft_gpg.gpg {{ microsoft_gpg_keyring }}"
+  become: true
+
+- name: Verify the GPG key register as verify_gpg
+  shell:
+    cmd: "gpg --no-default-keyring --keyring {{ microsoft_gpg_keyring }} --fingerprint"
+  register: verify_gpg
+
+- name: Extract only the GPG fingerprint from the verify_gpg fact
+  set_fact:
+    gpg_fingerprint: "{{ verify_gpg.stdout | regex_search('([A-Za-z0-9]+( [A-Za-z0-9]+)+)\\s+([A-Za-z0-9]+( [A-Za-z0-9]+)+)') }}"  
+
+- name: Fail if retrieved GPG fingerprint does not match with the known good fingerprint
+  ansible.builtin.fail:
+    msg: "Microsoft GPG fingerprint does not match with known good fingerprint"
+  when: gpg_fingerprint not in microsoft_gpg_fingerprint
+
+- name: Add the Azure CLI Repository
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by={{ microsoft_gpg_keyring }}] https://packages.microsoft.com/repos/azure-cli/ {{ lsb_release }} main"
+    filename: azure-cli
+    state: present
+  become: true
+
+- name: Install Azure-CLI
+  ansible.builtin.apt:
+    name: azure-cli={{ azure_cli_version }}
+    state: present
+  become: true

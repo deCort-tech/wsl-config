@@ -1,0 +1,3 @@
+.vault_password.txt
+group_vars/localhost/vault
+roles/configure_wsl/vars/username.yaml

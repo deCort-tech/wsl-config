@@ -1,0 +1,4 @@
+ansible_connection: local
+ansible_user: svc_ansible
+ansible_password: "{{ ansible_password }}"
+ansible_become_password: "{{ ansible_password }}"
