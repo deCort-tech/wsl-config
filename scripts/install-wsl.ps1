@@ -216,6 +216,10 @@ function Install-WSL {
         Write-Host "Copy the ansible.cfg to the svc_ansible's home directory" -BackgroundColor Green
         wsl -u $ansibleuser /bin/bash -c "cp ../ansible_config/ansible.cfg ~/.ansible.cfg && chown '${ansibleuser}:${ansibleuser}' ~/.ansible.cfg && chmod 0644 ~/.ansible.cfg"
 
+        ## Copy the AWS CLI PGP Public Key file to /tmp/aws-cli-pgp-public-key
+        Write-Host "Copy the AWS-CLI PGP Public Key file to /tmp/aws-cli-pgp-public-key"
+        wsl -u $ansibleuser /bin/bash -c "cp ../files/aws-cli-pgp-public-key /tmp/aws-cli-pgp-public-key"
+
     }
     Set-AnsibleConfig
 
