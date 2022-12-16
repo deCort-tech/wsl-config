@@ -109,7 +109,7 @@ function Install-WSL {
             
             ## Now we got to wait a few minutes in order for the distro to install before we can continue on
             Write-Host "Waiting 1 minute before continuing on" -BackgroundColor Green
-            Start-Sleep(75)
+            Start-Sleep(60)
             
             ## Add new user
             Write-Host "Creating new user $username" -BackgroundColor Green
@@ -171,7 +171,7 @@ function Install-WSL {
 
         ## Now we are going to create a service account under which our Ansible Playbook can run
         ## First we are going to generate a random password for this account.
-        $ansibleuser = "svc_ansible"
+        $script:ansibleuser = "svc_ansible"
         $script:ansiblepassword = [System.Web.Security.Membership]::GeneratePassword(16, 4)
         $script:vaultpassword = [System.Web.Security.Membership]::GeneratePassword(16, 4)
 
